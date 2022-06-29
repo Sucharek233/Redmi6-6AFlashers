@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/files">
+        <file>drivers.zip</file>
+        <file>platform-tools.zip</file>
+    </qresource>
+</RCC>
