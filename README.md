@@ -1,13 +1,24 @@
 Welcome to these 2 flashers!
 One for Redmi 6 and the other one for 6A.
 
-Going trough the flash wizard:
+**Sources:**
+
+Drivers taken from [here](https://github.com/DataStream3/15-Seconds-ADB-Installer-Reborn/tree/master/driver).
+
+Platform tools taken from [here](https://developer.android.com/studio/releases/platform-tools).
+
+ROMs are provided from official MIUI servers. Download links taken from [xiaomifirmwareupdater.com](https://xiaomifirmwareupdater.com).
+
+**Going trough the flash wizard:**
+
 Note: You're seeing ido instead of cereus or cactus, because I tested this on a Redmi 3 phone. These flashers have not been tested yet.
 
-You're going to be greeted by a introduction screen.
+You're going to be greeted by an introduction screen.
+
 ![1](https://user-images.githubusercontent.com/31042508/176512709-171d18c0-3918-40cc-bb32-7df27828a802.png)
 
 After you read it (or not), platform tools will get ready and drivers will install.
+
 ![2](https://user-images.githubusercontent.com/31042508/176512889-a3627217-44fb-489e-aca0-835481d98d91.png)
 
 Now it's time for a check.
