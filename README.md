@@ -1,6 +1,7 @@
 ### Welcome to Redmi 6/6A flashers!
 
 Redmi 6A flash tested by [SnooDrawings5122](https://www.reddit.com/u/SnooDrawings5122) on Reddit.
+
 Redmi 6 flash hasn't been tested yet, but should work fine. The ROM download and security checks work, so it should be good.
 
 ### Sources:
