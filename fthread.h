@@ -8,10 +8,16 @@
 #include <QDir>
 #include <QFile>
 #include <QMessageBox>
+#include <QTcpSocket>
 
 class fThread : public QThread
 {
    Q_OBJECT
+
+public:
+    QString getDir() {return dir;}
+
+    void process(QString app, QStringList command, QString path);
 
 public slots:
     void stopRunning();
@@ -22,20 +28,28 @@ public slots:
 
     void setFlashOption(int opt) {option = opt;};
 
+    void setDriverArch(QString architecture) {arch = architecture;}
+
 protected:
    virtual void run();
 
 signals:
    void update(QString);
 
+   void msgBox(QString, QString, int);
+
 private:
     bool isRunning;
+
+    QString dir;
 
     QString status;
 
     int function;
 
     int option;
+
+    QString arch = "x64";
 
 };
 

@@ -5,6 +5,7 @@ int scene = 0;
 int delScene = -1;
 
 QString stylesheet;
+QString msgBoxStylesheet;
 
 void MainWindow::setInfoLabelText(QString text)
 {
@@ -85,13 +86,14 @@ void MainWindow::switchScenes(int scene)
         ui->pushButton_Next->setEnabled(false);
 
         QMessageBox flashType;
+        flashType.setStyleSheet(msgBoxStylesheet);
         flashType.setWindowTitle("Select flash type");
         flashType.setText("Please choose one of the flash types:");
         QAbstractButton* ca = flashType.addButton("Clean all", QMessageBox::YesRole);
         flashType.addButton("Save user data", QMessageBox::NoRole);
         flashType.exec();
-        if (flashType.clickedButton() == ca) {qDebug() << "clean all"; fT.setFlashOption(1);
-        } else {qDebug() << "save data"; fT.setFlashOption(2);}
+        if (flashType.clickedButton() == ca) {fT.setFlashOption(1);
+        } else {fT.setFlashOption(2);}
 
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
         fT.switchFunctions(4);
@@ -100,7 +102,7 @@ void MainWindow::switchScenes(int scene)
         ui->pushButton_Next->setEnabled(false);
         ui->label_Flash->setStyleSheet(stylesheet + "color: green;");
         ui->label_Cleanup->setStyleSheet(stylesheet + "color: cyan;");
-        ui->labelMain->setText("Temporary file cleanup");
+        ui->labelMain->setText("Temporary files cleanup");
         setInfoLabelText("Files used for the flash will now delete.\n"
                          "After it's done, please close this window.");
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
@@ -112,6 +114,7 @@ void MainWindow::deleteScenes(int scene)
 {
     if (scene == 0) {
         delete lText;
+        ui->pushButton_Resume->setVisible(false);
     } else if (scene == 1) {
         delete lText;
         delete lProg;
@@ -133,8 +136,99 @@ void MainWindow::setDlProgText(QString text)
         ui->pushButton_Next->setEnabled(true);
     } else if (text == "green") {
         ui->label_Cleanup->setStyleSheet(stylesheet + "color: green;");
+    } else if (text == "close") {
+        ui->pushButton_Next->setVisible(false);
+        ui->pushButton_Close->setVisible(true);
     } else {
         lProg->setText(text);
+    }
+}
+
+
+void MainWindow::msgBoxThread(QString title, QString text, int exec)
+{
+    QMessageBox msgBox;
+    msgBox.setWindowTitle(title);
+    msgBox.setText(text);
+    msgBox.setStyleSheet(msgBoxStylesheet);
+    if (exec == 1) {msgBox.exec();}
+    if (title == "Driver install error") {
+        text += "Please click Retry to retry the installation.<br>"
+                "If you already have the drivers installed, click Ignore.<br>"
+                "If you have a 32-bit system, click Install x86 drivers.<br>"
+                "If this message keeps showing up, click Open driver folder and try opening both .exe files.<br><br>"
+                "If none of these worked for you, please report the error code "
+                "on my <a href=\"https://github.com/Sucharek233/Redmi6-6AFlashers/issues\">Github repository</a> (open an issue there).";
+        msgBox.setText(text);
+        msgBox.setTextFormat(Qt::RichText);
+        QPushButton* retry = msgBox.addButton("Retry", QMessageBox::YesRole);
+        QPushButton* x86 = msgBox.addButton("Install x86 drivers", QMessageBox::YesRole);
+        QPushButton* open = msgBox.addButton("Open driver folder", QMessageBox::YesRole);
+        QPushButton* ignore = msgBox.addButton("Ignore", QMessageBox::NoRole);
+        msgBox.exec();
+        if (msgBox.clickedButton() == retry) {
+            fT.setDriverArch("x64");
+            fT.start();
+        } else if (msgBox.clickedButton() == ignore) {
+            setDlProgText("Driver installation failed, ignored.\n"
+                          "Please click on the Next button to continue.");
+            ui->pushButton_Next->setEnabled(true);
+        } else if (msgBox.clickedButton() == x86) {
+            fT.setDriverArch("x86");
+            fT.start();
+        } else if (msgBox.clickedButton() == open) {
+            QString dir = fT.getDir() + "drivers"; dir.replace("/", "\\");
+            system("explorer " + dir.toUtf8());
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("Installing drivers on your own");
+            msgBox.setText("An explorer window should be now opened on your screen.<br>"
+                           "Please open \"drivers_x64.exe\" or \"drivers_x86.exe\" to install these drivers.<br>"
+                           "If you can't install any of these, please open an issue on my "
+                           "<a href=\"https://github.com/Sucharek233/Redmi6-6AFlashers/issues\">Github repository</a> "
+                           "and tell me, what is the installer doing, if you want, record a video or take screenshots of it.");
+            msgBox.setStyleSheet(msgBoxStylesheet);
+            msgBox.setTextFormat(Qt::RichText);
+            QPushButton* success = msgBox.addButton("Installation succeeded", QMessageBox::YesRole);
+            QPushButton* fail = msgBox.addButton("Installation failed", QMessageBox::NoRole);
+            msgBox.exec();
+            if (msgBox.clickedButton() == success) {
+                setDlProgText("Finished\n\n"
+                              "Please proceed to the next step, where your\n"
+                              "phone will be checked for any mismatches.");
+                ui->pushButton_Next->setEnabled(true);
+            } else if (msgBox.clickedButton() == fail) {
+                setDlProgText("Drivers not installed, cannot continue.");
+                ui->pushButton_Next->setVisible(false);
+                ui->pushButton_Close->setVisible(true);
+            }
+        }
+    } else if (title == "Could not detect device") {
+        QPushButton* retry = msgBox.addButton("Retry", QMessageBox::YesRole);
+        QPushButton* cancel = msgBox.addButton("Cancel", QMessageBox::NoRole);
+        msgBox.setText("Device cannot be detected\n"
+                       "Please make sure your phone is in fastboot mode and connected into your PC.\n\n"
+                       "If this issue persists, here's a list of things you can try:\n"
+                       "Restarting your computer.\n"
+                       "Using a different cable.\n"
+                       "Trying a different port on your PC or laptop.\n"
+                       "Using a different PC or a laptop.");
+        msgBox.exec();
+        if (msgBox.clickedButton() == retry) {
+            fT.start();
+        } else if (msgBox.clickedButton() == cancel) {
+            ui->pushButton_Next->setVisible(false);
+            ui->pushButton_Close->setVisible(true);
+        }
+    } else if (title == "No internet") {
+        QPushButton* retry = msgBox.addButton("Retry", QMessageBox::YesRole);
+        QPushButton* cancel = msgBox.addButton("Cancel", QMessageBox::NoRole);
+        msgBox.exec();
+        if (msgBox.clickedButton() == retry) {
+            fT.start();
+        } else if (msgBox.clickedButton() == cancel) {
+            ui->pushButton_Next->setVisible(false);
+            ui->pushButton_Close->setVisible(true);
+        }
     }
 }
 
@@ -143,6 +237,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    ui->pushButton_Close->setVisible(false);
 
     setInfoLabelText("Hello, and welcome to this automatic flash setup.\n"
                      "You will be walked trough steps that involve downloading, \n"
@@ -153,8 +249,12 @@ MainWindow::MainWindow(QWidget *parent)
                      "Anyways, let's get started.");
 
     QObject::connect(&fT,SIGNAL(update(const QString&)),SLOT(setDlProgText(const QString&)), Qt::QueuedConnection);
+    QObject::connect(&fT,SIGNAL(msgBox(const QString&, const QString&, const int&)),SLOT(msgBoxThread(const QString&, const QString&, const int&)), Qt::QueuedConnection);
 
     stylesheet = "border: 2px solid black; ";
+
+    msgBoxStylesheet = "QMessageBox QLabel {font-size: 20px;} "
+                       "QMessageBox QPushButton {font-size: 16px;}";
 }
 
 
@@ -169,4 +269,45 @@ void MainWindow::on_pushButton_Next_clicked()
     delScene += 1;
     deleteScenes(delScene);
     switchScenes(scene);
+}
+
+void MainWindow::on_pushButton_Close_clicked()
+{
+    close();
+}
+
+void MainWindow::on_pushButton_Resume_clicked()
+{
+    if (startFrom.exec() == QDialog::Accepted) {
+        ui->pushButton_Resume->setVisible(false);
+
+        QString option = startFrom.getOption();
+        if (option == "prep") {
+            ui->pushButton_Next->click();
+        } else if (option == "check") {
+            ui->label_Intro->setStyleSheet(stylesheet + "color: green;");
+            scene += 1; delScene += 1;
+            ui->pushButton_Next->click();
+        } else if (option == "dl") {
+            ui->label_Intro->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Prep->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Check->setStyleSheet(stylesheet + "color: green;");
+            scene += 3; delScene += 3;
+            ui->pushButton_Next->click();
+        } else if (option == "flash") {
+            ui->label_Intro->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Prep->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Check->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Download->setStyleSheet(stylesheet + "color: green;");
+            scene += 4; delScene += 4;
+            ui->pushButton_Next->click();
+        } else if (option == "cleanup") {
+            ui->label_Intro->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Prep->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Check->setStyleSheet(stylesheet + "color: green;");
+            ui->label_Download->setStyleSheet(stylesheet + "color: green;");
+            scene += 6; delScene += 6;
+            ui->pushButton_Next->click();
+        }
+    }
 }

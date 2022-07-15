@@ -3,6 +3,7 @@
 
 #include "qlabel.h"
 #include "fthread.h"
+#include "resume.h"
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -27,10 +28,17 @@ private slots:
 
     void setDlProgText(QString text);
 
+    void msgBoxThread(QString title, QString text, int exec);
+
+    void on_pushButton_Close_clicked();
+
+    void on_pushButton_Resume_clicked();
+
 private:
     Ui::MainWindow *ui;
 
     fThread fT;
+    resume startFrom;
 
     QLabel *lText;
     QLabel *lProg;

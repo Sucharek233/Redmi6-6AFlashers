@@ -1,6 +1,6 @@
 #include "fthread.h"
 
-QString dir;
+QString codename;
 
 QString getUserPath()
 {
@@ -12,7 +12,7 @@ QString getvar(QString get)
 {
     QProcess getVar;
     QStringList command; command << "/C" << "fastboot getvar " + get;
-    getVar.setWorkingDirectory(dir);
+    getVar.setWorkingDirectory(getUserPath() + "/AppData/Local/Temp/Sucharek/");
     getVar.start("cmd", command); getVar.waitForFinished();
     QString output = getVar.readAllStandardError();
     return output.left(output.count() - 30);
@@ -41,6 +41,25 @@ QString getPercentage(QString path)
     return percentage;
 }
 
+void fThread::process(QString app, QStringList command, QString path)
+{
+    QProcess process;
+    process.setWorkingDirectory(path);
+    process.start(app, command);
+    process.waitForFinished();
+}
+
+QString getROMFolderName(QString path)
+{
+    QDir search(path);
+    QStringList dirs = search.entryList(QDir::NoDotAndDotDot | QDir::Dirs);
+    QString name;
+    foreach(QString folder, dirs) {
+        if (folder.count() < 30) {} else {name = folder; break;}
+    }
+    return name;
+}
+
 void fThread::run()
 {
     isRunning = 1;
@@ -52,30 +71,44 @@ void fThread::run()
             QDir createFolder; createFolder.mkdir(dir);
             createFolder.mkdir(dir + "/ROM");
 
-            update("Copying files...");
+            QString updateText;
+            updateText = "Copying files... "; update(updateText);
             QFile::copy(":/files/drivers.zip", dir + "drivers.zip");
             QFile::copy(":/files/platform-tools.zip", dir + "platform-tools.zip");
 
-            update("Extracting Platform Tools... (r33.0.2)");
-            QProcess extract;
-            command << "Expand-Archive" <<  "platform-tools.zip";
-            extract.setWorkingDirectory(dir);
-            extract.start("powershell", command);
-            extract.waitForFinished();
-            update("Extracting drivers...");
-            command.clear(); command << "Expand-Archive" << "drivers.zip";
-            extract.start("powershell", command);
-            extract.waitForFinished();
+            updateText += "Done\nExtracting Platform Tools... (r33.0.2)... "; update(updateText);
+            process("powershell", QStringList() << "Expand-Archive" <<  "platform-tools.zip", dir);
 
-            update("Installing drivers...");
-            system(dir.toUtf8() + "drivers/drivers_x64.exe");
-            update("Finished\n\n"
-                   "Please proceed to the next step, where your\n"
-                   "phone will be checked for any mismatches.\n\n"
-                   "Note: If driver installation fails, press Win + R on\n"
-                   "your keyboard, type \"%temp%/Sucharek/drivers\"\n"
-                   "and open the driver installation .exe file to retry.");
-            update("enable");
+            updateText += "Done\nExtracting drivers... "; update(updateText);
+            process("powershell", QStringList() << "Expand-Archive" <<  "drivers.zip", dir);
+            updateText += "Done\nRetrieving codename info... "; //NOT DONE YET!!!!!!!!!!!!
+
+            int errorCheck = 0;
+            if (arch == "x64") {
+                update("Installing drivers...");
+                errorCheck = system(dir.toUtf8() + "drivers/drivers_x64.exe");
+            } else if (arch == "x86") {
+                update("Installing 32-bit (x86) drivers...");
+                errorCheck = system(dir.toUtf8() + "drivers/drivers_x86.exe");
+            }
+            if (errorCheck == 256) {
+                update("Finished\n\n"
+                       "Please proceed to the next step, where your\n"
+                       "phone will be checked for any mismatches.\n\n");
+                update("enable");
+            } else {
+                update("Driver installation failed.");
+                QString reason = "Reason: ";
+                if (errorCheck == 1) {reason += "Access denied or file not found.<br>"
+                                                "Solution: Retry and allow administrative rights.";}
+                else if (errorCheck == -2147483648) {reason += "Installation canceled or wrong architecture.<br>"
+                                                               "Solution: Don't cancel or close the driver installation window or try x86 drivers.";}
+                else {reason += "Unknown reason.<br>"
+                                "Solution: Unknown solution.";}
+                msgBox("Driver install error", "Drivers failed to install!<br>" +
+                                               reason +
+                                               "<br>Error code: " + QString::number(errorCheck) + "<br><br>", 0);
+            }
             stopRunning();
         } else if (function == 2) {
             QProcess fd;
@@ -102,63 +135,100 @@ void fThread::run()
                     }
                     update(textToDisplay);
 
-                    output = getvar("product");
-                    textToDisplay += output;
-                    if (output == "product: cereus\r\n") { //for 6A, replace cereus with cactus
-                        textToDisplay += "Device name (codename) verified, PASS.\n"; update("enable");
-                    } else if (output == "product: \r\n") {
+                    codename = getvar("product");
+                    textToDisplay += codename;
+                    if (codename == "product: cereus\r\n") {
+                        textToDisplay += "Device codename verified, PASS.\nFlashing ROM for for Redmi 6.\n"; update("enable");
+                    } else if (codename == "product: cactus\r\n") {
+                        textToDisplay += "Device codename verified, PASS.\nFlashing ROM for for Redmi 6A.\n"; update("enable");
+                    } else if (codename == "product: \r\n") {
                         textToDisplay += "Could not get device codename, FAIL.";
                     } else {
-                        textToDisplay += "Device mismatch. This is not theselectedphone, FAIL.";
+                        textToDisplay += "Device mismatch. This is not Redmi 6/6A, FAIL.";
                     }
                     update(textToDisplay);
 
                     break;
                 } else {
+                    if (i > 99) {
                     update("Could not detect device.\n"
                            "Cannot continue.");
+                    msgBox("Could not detect device", "do the rest :)", 0);
+                    }
                 }
             }
             stopRunning();
         } else if (function == 3) {
+            QString checkInternet;
             QString dlProg;
             QString extProg;
 
+            int internetBreak = 0;
+            checkInternet = "Checking internet connection... (can take up to 15 seconds)"; update(checkInternet);
+            QTcpSocket check;
+            check.connectToHost("www.google.com", 80);
+            bool connected = check.waitForConnected();
+            if (connected == true) {
+                checkInternet = "Checking internet connection... Online\n"; update(checkInternet);
+            } else {
+                checkInternet = "Checking internet connection... Offline\n"
+                                 "Cannot continue.";
+                update(checkInternet);
+                msgBox("No internet", "You have no internet access.\n"
+                                      "Please check your internet connection and click the Retry button.\n\n"
+                                      "Here's a list of things you can try:\n"
+                                      "Repluging your ethernet cable.\n"
+                                      "Turning WiFi off and on.\n"
+                                      "Restarting your router.\n"
+                                      "Restarting your PC.", 0);
+                internetBreak = 1;
+            }
+
+            if (internetBreak == 0) {
             QProcess getROMReady;
-            QString romLink = "https://bigota.d.miui.com/V11.0.4.0.PCGMIXM/cereus_global_images_V11.0.4.0.PCGMIXM_20200527.0000.00_9.0_global_f6d253e00b.tgz";
-            //For 6A: https://bigota.d.miui.com/V11.0.8.0.PCBMIXM/cactus_global_images_V11.0.8.0.PCBMIXM_20200509.0000.00_9.0_global_5fe1e27073.tgz
+            QString romLink;
+            if (codename == "product: cereus\r\n") {
+                romLink = "https://bigota.d.miui.com/V11.0.4.0.PCGMIXM/cereus_global_images_V11.0.4.0.PCGMIXM_20200527.0000.00_9.0_global_f6d253e00b.tgz";
+            } else if (codename == "product: cactus\r\n") {
+                romLink = "https://bigota.d.miui.com/V11.0.8.0.PCBMIXM/cactus_global_images_V11.0.8.0.PCBMIXM_20200509.0000.00_9.0_global_5fe1e27073.tgz";
+            } else {
+                msgBox("How???", "Ok, how are you even here?\n"
+                                 "Did my codename check fail?\n"
+                                 "Do you have the correct codename and this doesn't work?\n"
+                                 "Please open an issue on my gihub page if you got here with a wrong codename or correct one and this message displayed.\n\n"
+                                 "Thank you.", 1);
+            }
             command.clear(); command << "/C" << "curl " + romLink + " --output " + dir + "ROM/ROM.tgz 2>" + dir + "ROM/out.txt";
             getROMReady.startDetached("cmd", command);
             int avoidComplete = 0;
             while(true) {
                 QString percentage = getPercentage(dir + "ROM/");
-                dlProg = "Downloading ROM... (" + percentage + "%)"; update(dlProg);
+                dlProg = "Downloading ROM... (" + percentage + "%)"; update(checkInternet + dlProg);
 
                 avoidComplete += 1;
                 if (avoidComplete > 40) {if (percentage == "100") {break;}}
 
                 msleep(100);
             }
-            dlProg = "ROM downloaded\n\n"; update(dlProg);
+            dlProg = "ROM downloaded\n\n"; update(checkInternet + dlProg);
 
-            getROMReady.setWorkingDirectory(dir + "ROM");
-            command.clear(); command << "tar zxvf" << "ROM.tgz";
-            extProg = "Extracting ROM files... "; update(dlProg + extProg);
-            getROMReady.start("powershell", command); getROMReady.waitForFinished();
-            extProg += "Done\nDeleting leftover files... "; update(dlProg + extProg);
+            extProg = "Extracting ROM files... "; update(checkInternet + dlProg + extProg);
+            process("powershell", QStringList() << "tar zxvf" << "ROM.tgz", dir + "ROM");
+            extProg += "Done\nDeleting leftover files... "; update(checkInternet + dlProg + extProg);
             QFile::remove(dir + "ROM/ROM.tgz"); QFile::remove(dir + "ROM/out.txt"); QFile::remove(dir + "ROM/mOut.txt");
-            extProg += "Done\nRenaming folder to a reasonable name... "; update(dlProg + extProg);
-            QDir rename; rename.rename(dir + "ROM/ido_xhdpi_global_images_V8.5.2.0.LAIMIED_20170824.0000.00_5.1_global", dir + "ROM/ROM");
+            extProg += "Done\nRenaming folder to a reasonable name... "; update(checkInternet + dlProg + extProg);
+            QDir rename; rename.rename(dir + "ROM/" + getROMFolderName(dir + "ROM"), dir + "ROM/ROM");
             extProg += "Done\n\n";
 
-            update(dlProg + extProg + "Finished");
-
+            update(checkInternet + dlProg + extProg + "Finished");
             update("enable");
+            }
             stopRunning();
         } else if (function == 4) {
             QProcess checkConnection;
             checkConnection.setWorkingDirectory(dir + "platform-tools");
             command.clear(); command << "/C" << "fastboot devices";
+            int connectionBreak = 0;
             for (int i = 1; i < 101; i++) {
                 update("Detecting device... (tries: " + QString::number(i) + "/100)"); sleep(1);
                 checkConnection.start("cmd", command); checkConnection.waitForFinished();
@@ -170,8 +240,16 @@ void fThread::run()
                            "Starting flash in 10 seconds...");
                     sleep(10);
                     break;
+                } else {
+                    if (i > 99) {
+                        update("Could not detect device.\n"
+                               "Cannot continue.");
+                        msgBox("Could not detect device", "do the rest :)", 0);
+                        connectionBreak = 1;
+                    }
                 }
             }
+            if (connectionBreak == 0) {
             QFile::copy(dir + "platform-tools/fastboot.exe", dir + "ROM/ROM/fastboot.exe");
 
             update("Flashing...");
@@ -187,12 +265,13 @@ void fThread::run()
 
             update("enable");
             update("Flashing finished!\n"
-                   "If you want to clean temporary files,\n"
+                   "If you don't want to clean temporary files,\n"
                    "close this window now.\n"
                    "If you want to clean them,\n"
                    "click on the next button.\n\n"
                    "You should have your phone flashed now.\n"
                    "Enjoy!");
+            }
             stopRunning();
         } else if (function == 5) {
             update("Deleting temporary files...");
@@ -201,6 +280,7 @@ void fThread::run()
             update("Temporary files deleted.\n"
                    "You can close this window now.\n\n"
                    "Thank you for using my program.");
+            update("close");
             stopRunning();
         }
     }
