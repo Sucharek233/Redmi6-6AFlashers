@@ -11,8 +11,8 @@ QString getUserPath()
 QString getvar(QString get)
 {
     QProcess getVar;
-    QStringList command; command << "/C" << "fastboot getvar " + get;
-    getVar.setWorkingDirectory(getUserPath() + "/AppData/Local/Temp/Sucharek/");
+    QStringList command; command << "/C" << "fastboot.exe getvar " + get;
+    getVar.setWorkingDirectory(getUserPath() + "/AppData/Local/Temp/Sucharek/platform-tools");
     getVar.start("cmd", command); getVar.waitForFinished();
     QString output = getVar.readAllStandardError();
     return output.left(output.count() - 30);
@@ -113,7 +113,7 @@ void fThread::run()
         } else if (function == 2) {
             QProcess fd;
             fd.setWorkingDirectory(dir + "platform-tools");
-            command.clear(); command << "/C" << "fastboot devices";
+            command.clear(); command << "/C" << "fastboot.exe devices";
             for (int i = 1; i < 101; i++) {
                 update("Detecting device... (tries: " + QString::number(i) + "/100)");
                 sleep(1);
@@ -124,28 +124,33 @@ void fThread::run()
                                             "Serial number: " + output.left(output.count() - 10) + "\n";
                     update(textToDisplay);
 
+                    int enableNext = 0;
+
                     output = getvar("unlocked");
                     textToDisplay += output;
                     if (output == "unlocked: yes\r\n") {
-                        textToDisplay += "Bootloader unlocked, PASS.\n"; update("enable");
+                        textToDisplay += "Bootloader unlocked, PASS.\n"; enableNext += 1;
                     } else if (output == "unlocked: no\r\n") {
                         textToDisplay += "Bootloader locked, cannot continue, FAIL.\n";
                     } else {
-                        textToDisplay += "Could not get bootloader info, continuing anyway.\n"; update("enable");
+                        textToDisplay += "Could not get bootloader info, continuing anyway.\n"; enableNext += 1;
                     }
                     update(textToDisplay);
 
                     codename = getvar("product");
                     textToDisplay += codename;
                     if (codename == "product: cereus\r\n") {
-                        textToDisplay += "Device codename verified, PASS.\nFlashing ROM for for Redmi 6.\n"; update("enable");
+                        textToDisplay += "Device codename verified, PASS.\n\nFlashing ROM for for Redmi 6."; enableNext += 1;
                     } else if (codename == "product: cactus\r\n") {
-                        textToDisplay += "Device codename verified, PASS.\nFlashing ROM for for Redmi 6A.\n"; update("enable");
+                        textToDisplay += "Device codename verified, PASS.\n\nFlashing ROM for for Redmi 6A."; enableNext += 1;
                     } else if (codename == "product: \r\n") {
-                        textToDisplay += "Could not get device codename, FAIL.";
+                        textToDisplay += "Could not get device codename, FAIL.\n\n"
+                                         "Cannon continue.";
                     } else {
-                        textToDisplay += "Device mismatch. This is not Redmi 6/6A, FAIL.";
+                        textToDisplay += "Device mismatch. This is not Redmi 6/6A, FAIL.\n\n"
+                                         "Cannot continue";
                     }
+                    if (enableNext > 1) {update("enable");} else {update("close");}
                     update(textToDisplay);
 
                     break;
@@ -227,7 +232,7 @@ void fThread::run()
         } else if (function == 4) {
             QProcess checkConnection;
             checkConnection.setWorkingDirectory(dir + "platform-tools");
-            command.clear(); command << "/C" << "fastboot devices";
+            command.clear(); command << "/C" << "fastboot.exe devices";
             int connectionBreak = 0;
             for (int i = 1; i < 101; i++) {
                 update("Detecting device... (tries: " + QString::number(i) + "/100)"); sleep(1);

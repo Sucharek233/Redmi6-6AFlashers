@@ -5,6 +5,8 @@
 #include "fthread.h"
 #include "resume.h"
 #include <QMainWindow>
+#include <QStandardPaths>
+#include <QDir>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

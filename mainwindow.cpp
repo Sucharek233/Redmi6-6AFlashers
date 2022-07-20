@@ -7,6 +7,8 @@ int delScene = -1;
 QString stylesheet;
 QString msgBoxStylesheet;
 
+QString dir;
+
 void MainWindow::setInfoLabelText(QString text)
 {
     QSizePolicy labelSize;
@@ -278,6 +280,18 @@ void MainWindow::on_pushButton_Close_clicked()
 
 void MainWindow::on_pushButton_Resume_clicked()
 {
+    QStringList homePath = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+    QString mainPath = homePath.first().split(QDir::separator()).last() + "/AppData/Local/Temp/Sucharek/";
+    int isGood = 0;
+    QDir check(mainPath);
+    if (check.exists()) {
+        isGood += 1;
+        check.setPath(mainPath + "platform-tools");
+        if (check.exists()) {
+            isGood += 1;
+        }
+    }
+    if (isGood > 1) {
     if (startFrom.exec() == QDialog::Accepted) {
         ui->pushButton_Resume->setVisible(false);
 
@@ -309,5 +323,14 @@ void MainWindow::on_pushButton_Resume_clicked()
             scene += 6; delScene += 6;
             ui->pushButton_Next->click();
         }
+    }
+    } else {
+        QMessageBox notFound;
+        notFound.setWindowTitle("Cannot resume");
+        notFound.setText("Directory not found.\n"
+                         "Cannot load important files.\n\n"
+                         "Cannot resume from action.");
+        notFound.setStyleSheet(msgBoxStylesheet);
+        notFound.exec();
     }
 }
