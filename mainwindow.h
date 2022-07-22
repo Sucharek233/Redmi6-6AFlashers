@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <QStandardPaths>
 #include <QDir>
+#include <QProgressBar>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -31,6 +32,8 @@ private slots:
     void setDlProgText(QString text);
 
     void msgBoxThread(QString title, QString text, int exec);
+
+    void progressBar(int percentage);
 
     void on_pushButton_Close_clicked();
 

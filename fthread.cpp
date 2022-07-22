@@ -38,6 +38,10 @@ QString getPercentage(QString path)
     QString percentage = lastLine.left(4).simplified();
     if (lastLine == "\n") {percentage = "100";}
 
+    if (percentage.contains("%")) {
+        QString fix = percentage.left(percentage.count() - 1);
+        percentage = fix;
+    }
     return percentage;
 }
 
@@ -46,7 +50,7 @@ void fThread::process(QString app, QStringList command, QString path)
     QProcess process;
     process.setWorkingDirectory(path);
     process.start(app, command);
-    process.waitForFinished();
+    process.waitForFinished(18000000);
 }
 
 QString getROMFolderName(QString path)
@@ -72,32 +76,34 @@ void fThread::run()
             createFolder.mkdir(dir + "/ROM");
 
             QString updateText;
-            updateText = "Copying files... "; update(updateText);
+            updateText = "Copying files... "; emit update(updateText);
             QFile::copy(":/files/drivers.zip", dir + "drivers.zip");
             QFile::copy(":/files/platform-tools.zip", dir + "platform-tools.zip");
+            QFile::copy(":/files/7z.exe", dir + "7z.exe");
+            QFile::copy(":/files/curl.exe", dir + "curl.exe");
 
-            updateText += "Done\nExtracting Platform Tools... (r33.0.2)... "; update(updateText);
-            process("powershell", QStringList() << "Expand-Archive" <<  "platform-tools.zip", dir);
+            updateText += "Done\nExtracting Platform Tools (r33.0.2)... "; emit update(updateText);
+            process("cmd", QStringList() << "/C" << "7z.exe" << "x" <<  "platform-tools.zip" << "-oplatform-tools" << "-y", dir);
 
-            updateText += "Done\nExtracting drivers... "; update(updateText);
-            process("powershell", QStringList() << "Expand-Archive" <<  "drivers.zip", dir);
+            updateText += "Done\nExtracting drivers... "; emit update(updateText);
+            process("cmd", QStringList() << "/C" << "7z.exe" << "x" <<  "drivers.zip" << "-odrivers" << "-y", dir);
             updateText += "Done\nRetrieving codename info... "; //NOT DONE YET!!!!!!!!!!!!
 
             int errorCheck = 0;
             if (arch == "x64") {
-                update("Installing drivers...");
+                emit update("Installing drivers...");
                 errorCheck = system(dir.toUtf8() + "drivers/drivers_x64.exe");
             } else if (arch == "x86") {
-                update("Installing 32-bit (x86) drivers...");
+                emit update("Installing 32-bit (x86) drivers...");
                 errorCheck = system(dir.toUtf8() + "drivers/drivers_x86.exe");
             }
             if (errorCheck == 256) {
-                update("Finished\n\n"
+                emit update("Finished\n\n"
                        "Please proceed to the next step, where your\n"
                        "phone will be checked for any mismatches.\n\n");
-                update("enable");
+                emit update("enable");
             } else {
-                update("Driver installation failed.");
+                emit update("Driver installation failed.");
                 QString reason = "Reason: ";
                 if (errorCheck == 1) {reason += "Access denied or file not found.<br>"
                                                 "Solution: Retry and allow administrative rights.";}
@@ -105,9 +111,9 @@ void fThread::run()
                                                                "Solution: Don't cancel or close the driver installation window or try x86 drivers.";}
                 else {reason += "Unknown reason.<br>"
                                 "Solution: Unknown solution.";}
-                msgBox("Driver install error", "Drivers failed to install!<br>" +
-                                               reason +
-                                               "<br>Error code: " + QString::number(errorCheck) + "<br><br>", 0);
+                emit msgBox("Driver install error", "Drivers failed to install!<br>" +
+                                                    reason +
+                                                    "<br>Error code: " + QString::number(errorCheck) + "<br><br>", 0);
             }
             stopRunning();
         } else if (function == 2) {
@@ -115,14 +121,14 @@ void fThread::run()
             fd.setWorkingDirectory(dir + "platform-tools");
             command.clear(); command << "/C" << "fastboot.exe devices";
             for (int i = 1; i < 101; i++) {
-                update("Detecting device... (tries: " + QString::number(i) + "/100)");
+                emit update("Detecting device... (tries: " + QString::number(i) + "/100)");
                 sleep(1);
                 fd.start("cmd", command); fd.waitForFinished();
                 QString output = fd.readAll();
                 if (output != "") {
                     QString textToDisplay = "Device detected\n"
                                             "Serial number: " + output.left(output.count() - 10) + "\n";
-                    update(textToDisplay);
+                    emit update(textToDisplay);
 
                     int enableNext = 0;
 
@@ -135,7 +141,7 @@ void fThread::run()
                     } else {
                         textToDisplay += "Could not get bootloader info, continuing anyway.\n"; enableNext += 1;
                     }
-                    update(textToDisplay);
+                    emit update(textToDisplay);
 
                     codename = getvar("product");
                     textToDisplay += codename;
@@ -150,15 +156,15 @@ void fThread::run()
                         textToDisplay += "Device mismatch. This is not Redmi 6/6A, FAIL.\n\n"
                                          "Cannot continue";
                     }
-                    if (enableNext > 1) {update("enable");} else {update("close");}
-                    update(textToDisplay);
+                    if (enableNext > 1) {emit update("enable");} else {emit update("close");}
+                    emit update(textToDisplay);
 
                     break;
                 } else {
                     if (i > 99) {
-                    update("Could not detect device.\n"
-                           "Cannot continue.");
-                    msgBox("Could not detect device", "do the rest :)", 0);
+                    emit update("Could not detect device.\n"
+                                "Cannot continue.");
+                    emit msgBox("Could not detect device", "do the rest :)", 0);
                     }
                 }
             }
@@ -169,23 +175,23 @@ void fThread::run()
             QString extProg;
 
             int internetBreak = 0;
-            checkInternet = "Checking internet connection... (can take up to 15 seconds)"; update(checkInternet);
+            checkInternet = "Checking internet connection... (can take up to 15 seconds)"; emit update(checkInternet);
             QTcpSocket check;
             check.connectToHost("www.google.com", 80);
             bool connected = check.waitForConnected();
             if (connected == true) {
-                checkInternet = "Checking internet connection... Online\n"; update(checkInternet);
+                checkInternet = "Checking internet connection... Online\n"; emit update(checkInternet);
             } else {
                 checkInternet = "Checking internet connection... Offline\n"
                                  "Cannot continue.";
-                update(checkInternet);
-                msgBox("No internet", "You have no internet access.\n"
-                                      "Please check your internet connection and click the Retry button.\n\n"
-                                      "Here's a list of things you can try:\n"
-                                      "Repluging your ethernet cable.\n"
-                                      "Turning WiFi off and on.\n"
-                                      "Restarting your router.\n"
-                                      "Restarting your PC.", 0);
+                emit update(checkInternet);
+                emit msgBox("No internet", "You have no internet access.\n"
+                                           "Please check your internet connection and click the Retry button.\n\n"
+                                           "Here's a list of things you can try:\n"
+                                           "Repluging your ethernet cable.\n"
+                                           "Turning WiFi off and on.\n"
+                                           "Restarting your router.\n"
+                                           "Restarting your PC.", 0);
                 internetBreak = 1;
             }
 
@@ -197,36 +203,74 @@ void fThread::run()
             } else if (codename == "product: cactus\r\n") {
                 romLink = "https://bigota.d.miui.com/V11.0.8.0.PCBMIXM/cactus_global_images_V11.0.8.0.PCBMIXM_20200509.0000.00_9.0_global_5fe1e27073.tgz";
             } else {
-                msgBox("How???", "Ok, how are you even here?\n"
-                                 "Did my codename check fail?\n"
-                                 "Do you have the correct codename and this doesn't work?\n"
-                                 "Please open an issue on my gihub page if you got here with a wrong codename or correct one and this message displayed.\n\n"
-                                 "Thank you.", 1);
+                emit msgBox("How???", "Ok, how are you even here?\n"
+                                      "Did my codename check fail?\n"
+                                      "Do you have the correct codename and this doesn't work?\n"
+                                      "Please open an issue on my gihub page if you got here with a wrong codename or correct one and this message displayed.\n\n"
+                                      "Thank you.", 1);
             }
-            command.clear(); command << "/C" << "curl " + romLink + " --output " + dir + "ROM/ROM.tgz 2>" + dir + "ROM/out.txt";
+            command.clear(); command << "/C" << dir + "curl.exe " + romLink + " --output " + dir + "ROM/ROM.tgz --insecure 2>" + dir + "ROM/out.txt";
             getROMReady.startDetached("cmd", command);
+            emit progBar(-1);
             int avoidComplete = 0;
             while(true) {
                 QString percentage = getPercentage(dir + "ROM/");
-                dlProg = "Downloading ROM... (" + percentage + "%)"; update(checkInternet + dlProg);
+                dlProg = "Downloading ROM... (" + percentage + "%)"; emit update(checkInternet + dlProg);
+                emit progBar(percentage.toInt());
+
+                avoidComplete += 1;
+                if (avoidComplete > 40) {if (percentage == "100") {sleep(2); break;}}
+
+                msleep(100);
+            }
+            dlProg = "ROM downloaded\n\n"; emit update(checkInternet + dlProg); emit progBar(0);
+
+            extProg = "Extracting ROM files... (0%, 1/2)"; emit update(checkInternet + dlProg + extProg);
+            QProcess extract; command.clear();
+            command <<  "/C" << dir + "7z.exe" << "e" << dir + "ROM/ROM.tgz" << "-o" + dir + "ROM/" << "-y" << "-bsp1" << ">" + dir + "ROM/out.txt";
+            extract.startDetached("cmd", command);
+            avoidComplete = 0;
+            while(true) {
+                QString percentage = getPercentage(dir + "ROM/");
+                int overallPercentage = percentage.toInt() / 2;
+                extProg = "Extracting ROM files... (" + QString::number(overallPercentage) + "%, 1/2)"; emit update(checkInternet + dlProg + extProg);
+                emit progBar(overallPercentage);
 
                 avoidComplete += 1;
                 if (avoidComplete > 40) {if (percentage == "100") {break;}}
 
                 msleep(100);
             }
-            dlProg = "ROM downloaded\n\n"; update(checkInternet + dlProg);
+            extProg = "Extracting ROM files... (2/2)"; emit update(checkInternet + dlProg + extProg);
+            emit progBar(50);
+            command.clear(); command << "/C" << dir + "7z.exe" << "x" << dir + "ROM/ROM.tar" << "-o" + dir + "ROM/" << "-y" << "-bsp1" << ">" + dir + "ROM/out.txt";
+            extract.startDetached("cmd", command);
+            avoidComplete = 0;
+            while(true) {
+                QString percentage = getPercentage(dir + "ROM/");
+                int overallPercentage = 50 + (percentage.toInt() / 2);
+                extProg = "Extracting ROM files... (" + QString::number(overallPercentage) + "%, 2/2)"; emit update(checkInternet + dlProg + extProg);
+                emit progBar(overallPercentage);
 
-            extProg = "Extracting ROM files... "; update(checkInternet + dlProg + extProg);
-            process("powershell", QStringList() << "tar zxvf" << "ROM.tgz", dir + "ROM");
-            extProg += "Done\nDeleting leftover files... "; update(checkInternet + dlProg + extProg);
-            QFile::remove(dir + "ROM/ROM.tgz"); QFile::remove(dir + "ROM/out.txt"); QFile::remove(dir + "ROM/mOut.txt");
-            extProg += "Done\nRenaming folder to a reasonable name... "; update(checkInternet + dlProg + extProg);
+                avoidComplete += 1;
+                if (avoidComplete > 40) {if (percentage == "100") {sleep(2); break;}}
+
+                msleep(100);
+            }
+            extProg = "Extracting ROM files... Done\nDeleting leftover files... "; emit update(checkInternet + dlProg + extProg);
+            emit progBar(0);
+            QFile::remove(dir + "ROM/ROM.tgz"); QFile::remove(dir + "ROM/ROM.tar"); QFile::remove(dir + "ROM/out.txt"); QFile::remove(dir + "ROM/mOut.txt");
+            emit progBar(50);
+            extProg += "Done\nRenaming folder to a reasonable name... "; emit update(checkInternet + dlProg + extProg);
+            emit progBar(75);
             QDir rename; rename.rename(dir + "ROM/" + getROMFolderName(dir + "ROM"), dir + "ROM/ROM");
+            emit progBar(100);
             extProg += "Done\n\n";
+            sleep(2);
+            emit progBar(500);
 
-            update(checkInternet + dlProg + extProg + "Finished");
-            update("enable");
+            emit update(checkInternet + dlProg + extProg + "Finished");
+            emit update("enable");
             }
             stopRunning();
         } else if (function == 4) {
@@ -235,57 +279,59 @@ void fThread::run()
             command.clear(); command << "/C" << "fastboot.exe devices";
             int connectionBreak = 0;
             for (int i = 1; i < 101; i++) {
-                update("Detecting device... (tries: " + QString::number(i) + "/100)"); sleep(1);
+                emit update("Detecting device... (tries: " + QString::number(i) + "/100)"); sleep(1);
                 checkConnection.start("cmd", command); checkConnection.waitForFinished();
                 QString output = checkConnection.readAll();
                 if (output != "") {
-                    update("Device connection verified.\n"
-                           "A cmd will open, where you will be\n"
-                           "able to see the progress\n"
-                           "Starting flash in 10 seconds...");
+                    emit update("Device connection verified.\n"
+                                "A cmd will open, where you will be\n"
+                                "able to see the progress\n"
+                                "Starting flash in 10 seconds...");
                     sleep(10);
                     break;
                 } else {
                     if (i > 99) {
-                        update("Could not detect device.\n"
-                               "Cannot continue.");
-                        msgBox("Could not detect device", "do the rest :)", 0);
+                        emit update("Could not detect device.\n"
+                                    "Cannot continue.");
+                        emit msgBox("Could not detect device", "do the rest :)", 0);
                         connectionBreak = 1;
                     }
                 }
             }
             if (connectionBreak == 0) {
             QFile::copy(dir + "platform-tools/fastboot.exe", dir + "ROM/ROM/fastboot.exe");
+            QFile::copy(dir + "platform-tools/AdbWinApi.dll", dir + "ROM/ROM/AdbWinApi.dll");
+            QFile::copy(dir + "platform-tools/AdbWinUsbApi.dll", dir + "ROM/ROM/AdbWinUsbApi.dll");
 
-            update("Flashing...");
+            emit update("Flashing...");
             if (option == 1) {
-                system("cmd /C \"" + dir.toUtf8() + "ROM/ROM/flash_all.bat && "
+                system("cmd /C \"cd " + dir.toUtf8() + "ROM/ROM &&" + dir.toUtf8() + "ROM/ROM/flash_all.bat && "
                                                     "echo Warning! This is NOT logged. If you received any errors, please copy this whole output. && "
                                                     "echo Finished && pause\"");
             } else if (option == 2) {
-                system("cmd /C \"" + dir.toUtf8() + "ROM/ROM/flash_all_except_data_storage.bat && "
+                system("cmd /C \"cd " + dir.toUtf8() + "ROM/ROM &&" + dir.toUtf8() + "ROM/ROM/flash_all_except_data_storage.bat && "
                                                     "echo Warning! This is NOT logged. If you received any errors, please copy this whole output. && "
                                                     "echo Finished && pause\"");
             }
 
-            update("enable");
-            update("Flashing finished!\n"
-                   "If you don't want to clean temporary files,\n"
-                   "close this window now.\n"
-                   "If you want to clean them,\n"
-                   "click on the next button.\n\n"
-                   "You should have your phone flashed now.\n"
-                   "Enjoy!");
+            emit update("enable");
+            emit update("Flashing finished!\n"
+                        "If you don't want to clean temporary files,\n"
+                        "close this window now.\n"
+                        "If you want to clean them,\n"
+                        "click on the next button.\n\n"
+                        "You should have your phone flashed now.\n"
+                        "Enjoy!");
             }
             stopRunning();
         } else if (function == 5) {
-            update("Deleting temporary files...");
+            emit update("Deleting temporary files...");
             QDir remove(dir); remove.removeRecursively();
-            update("green");
-            update("Temporary files deleted.\n"
-                   "You can close this window now.\n\n"
-                   "Thank you for using my program.");
-            update("close");
+            emit update("green");
+            emit update("Temporary files deleted.\n"
+                        "You can close this window now.\n\n"
+                        "Thank you for using my program.");
+            emit update("close");
             stopRunning();
         }
     }

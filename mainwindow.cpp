@@ -9,6 +9,10 @@ QString msgBoxStylesheet;
 
 QString dir;
 
+QProgressBar* progBar;
+int crashStop;
+int createBar;
+
 void MainWindow::setInfoLabelText(QString text)
 {
     QSizePolicy labelSize;
@@ -126,6 +130,7 @@ void MainWindow::deleteScenes(int scene)
     } else if (scene == 4) {
         delete lText;
         delete lProg;
+        delete progBar;
     } else if (scene == 6) {
         delete lText;
         delete lProg;
@@ -234,6 +239,16 @@ void MainWindow::msgBoxThread(QString title, QString text, int exec)
     }
 }
 
+void MainWindow::progressBar(int percentage)
+{
+    if (percentage >= 0) {
+        ui->gridLayout_Content->addWidget(progBar);
+        progBar->setValue(percentage);
+        progBar->update();
+        crashStop += 1;
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -250,8 +265,13 @@ MainWindow::MainWindow(QWidget *parent)
                      "This app is free and open source, released on GitHub.\n\n"
                      "Anyways, let's get started.");
 
-    QObject::connect(&fT,SIGNAL(update(const QString&)),SLOT(setDlProgText(const QString&)), Qt::QueuedConnection);
-    QObject::connect(&fT,SIGNAL(msgBox(const QString&, const QString&, const int&)),SLOT(msgBoxThread(const QString&, const QString&, const int&)), Qt::QueuedConnection);
+    progBar = new QProgressBar;
+    progBar->setRange(0, 100);
+    progBar->setTextVisible(false);
+
+    QObject::connect(&fT,SIGNAL(update(const QString&)),SLOT(setDlProgText(const QString&)), Qt::AutoConnection);
+    QObject::connect(&fT,SIGNAL(msgBox(const QString&, const QString&, const int&)),SLOT(msgBoxThread(const QString&, const QString&, const int&)), Qt::AutoConnection);
+    QObject::connect(&fT,SIGNAL(progBar(const int&)),SLOT(progressBar(const int&)), Qt::AutoConnection);
 
     stylesheet = "border: 2px solid black; ";
 

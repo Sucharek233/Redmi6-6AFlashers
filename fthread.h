@@ -38,6 +38,8 @@ signals:
 
    void msgBox(QString, QString, int);
 
+   void progBar(int);
+
 private:
     bool isRunning;
 
