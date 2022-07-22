@@ -42,11 +42,15 @@ If you don't have a Redmi 6 or Redmi 6A, the program ends there.
 
 After your device is verified and internet connection will be checked, a ROM will start downloading (the best one for custom ROMs: R6 is 11.0.4.0 and R6A is 11.0.8.0).
 
-![image](https://user-images.githubusercontent.com/31042508/179203644-ee53fe64-524f-413a-8f5d-62e779a2babb.png)
+![progressDL](https://user-images.githubusercontent.com/31042508/180451119-fd086210-94a3-470d-9c80-633a279a3a33.png)
 
 After that, it will extract.
 
-![image](https://user-images.githubusercontent.com/31042508/179205440-b077fd74-1573-49c4-b738-194b47edc524.png)
+![progressExtract](https://user-images.githubusercontent.com/31042508/180451249-ddede633-38f8-444f-bd2f-f0d80bb59bc9.png)
+
+Then some additional tasks.
+
+![dlFinish](https://user-images.githubusercontent.com/31042508/180451369-700a5da7-2875-4d6c-a5ea-fa9fbe1c4b02.png)
 
 Flashing time! You'll get to choose if you want to wipe your data - clean all (recommended) or if you want to keep them - save user data.
 
