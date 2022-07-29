@@ -20,9 +20,6 @@ void MainWindow::setInfoLabelText(QString text)
 
     lText = new QLabel;
     lText->setText(text);
-    labelSize.setHorizontalPolicy(QSizePolicy::Expanding);
-    labelSize.setVerticalPolicy(QSizePolicy::Expanding);
-    lText->setSizePolicy(labelSize);
     lText->setAlignment(Qt::AlignTop);
     size.setPointSize(14);
     lText->setFont(size);
@@ -32,8 +29,25 @@ void MainWindow::setInfoLabelText(QString text)
     lProg = new QLabel;
     lProg->setSizePolicy(labelSize);
     lProg->setAlignment(Qt::AlignTop);
-    size.setPointSize(14);
     lProg->setFont(size);
+
+    spacer = new QLabel;
+    labelSize.setHorizontalPolicy(QSizePolicy::Expanding);
+    labelSize.setVerticalPolicy(QSizePolicy::Expanding);
+    spacer->setSizePolicy(labelSize);
+
+    if (scene < 2) {
+        rAuto->setText("Pick ROM automatically\n"
+                       "11.0.4.0 for Redmi 6\n"
+                       "11.0.8.0 for Redmi 6A");
+        rAuto->toggle();
+        rAuto->setFont(size);
+        rCustom->setText("Paste in your own MIUI version link");
+        rCustom->setFont(size);
+        iROM = new QLineEdit;
+        iROM->setEnabled(false);
+        iROM->setFont(size);
+    }
 }
 
 void MainWindow::switchScenes(int scene)
@@ -46,8 +60,9 @@ void MainWindow::switchScenes(int scene)
         setInfoLabelText("Now I will begin the process of installing the\n"
                          "necessary (pre-downloaded) programs to do security\n"
                          "checks to make sure you're ready for the flash.\n"
-                         "This shouldn't take long.\n\n\n");
+                         "This shouldn't take long.\n\n\n\n");
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
+        ui->gridLayout_Content->addWidget(spacer, 2, 0);
         fT.switchFunctions(1);
         fT.start();
     } else if (scene == 2) {
@@ -59,11 +74,12 @@ void MainWindow::switchScenes(int scene)
                          "You can do that by holding\n"
                          "power and volume down buttons.\n"
                          "After you done that, plug in your phone and\n"
-                         "click the Next button.");
+                         "click the Next button.\n\n");
     } else if (scene == 3) {
         ui->pushButton_Next->setEnabled(false);
-        fT.switchFunctions(2);
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
+        ui->gridLayout_Content->addWidget(spacer, 2, 0);
+        fT.switchFunctions(2);
         fT.start();
     } else if (scene == 4) {
         ui->label_Check->setStyleSheet(stylesheet + "color: green;");
@@ -73,12 +89,24 @@ void MainWindow::switchScenes(int scene)
                          "You can restart your device by "
                          "holding the power button.\n"
                          "After it downloads, please put your phone back \n"
-                         "in fastboot and click on the Next button.\n");
-        ui->pushButton_Next->setEnabled(false);
+                         "in fastboot and click on the Next button.\n\n");
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
-        fT.switchFunctions(3);
-        fT.start();
+        ui->gridLayout_Content->addWidget(rAuto, 2, 0);
+        ui->gridLayout_Content->addWidget(rCustom, 3, 0);
+        ui->gridLayout_Content->addWidget(iROM, 4, 0);
+        ui->gridLayout_Content->addWidget(spacer, 5, 0);
     } else if (scene == 5) {
+        ui->pushButton_Next->setEnabled(false);
+        if (rAuto->isChecked()) {
+            fT.switchFunctions(3);
+            fT.setROMLink("auto");
+            fT.start();
+        } else if (rCustom->isChecked()) {
+            fT.switchFunctions(3);
+            fT.setROMLink(link);
+            fT.start();
+        }
+    } else if (scene == 6) {
         ui->label_Download->setStyleSheet(stylesheet + "color: green;");
         ui->label_Flash->setStyleSheet(stylesheet + "color: cyan;");
         ui->labelMain->setText("Flash");
@@ -87,8 +115,8 @@ void MainWindow::switchScenes(int scene)
                          "one last final check, just to make sure everything\n"
                          "is ready to go.\n"
                          "Make sure your phone is plugged in, and click on the\n"
-                         "next button.");
-    } else if (scene == 6) {
+                         "next button.\n\n");
+    } else if (scene == 7) {
         ui->pushButton_Next->setEnabled(false);
 
         QMessageBox flashType;
@@ -102,16 +130,18 @@ void MainWindow::switchScenes(int scene)
         } else {fT.setFlashOption(2);}
 
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
+        ui->gridLayout_Content->addWidget(spacer, 2, 0);
         fT.switchFunctions(4);
         fT.start();
-    } else if (scene == 7) {
+    } else if (scene == 8) {
         ui->pushButton_Next->setEnabled(false);
         ui->label_Flash->setStyleSheet(stylesheet + "color: green;");
         ui->label_Cleanup->setStyleSheet(stylesheet + "color: cyan;");
         ui->labelMain->setText("Temporary files cleanup");
         setInfoLabelText("Files used for the flash will now delete.\n"
-                         "After it's done, please close this window.");
+                         "After it's done, please close this window.\n\n");
         ui->gridLayout_Content->addWidget(lProg, 1, 0);
+        ui->gridLayout_Content->addWidget(spacer, 2, 0);
         fT.switchFunctions(5);
         fT.start();
     }
@@ -121,19 +151,28 @@ void MainWindow::deleteScenes(int scene)
     if (scene == 0) {
         delete lText;
         ui->pushButton_Resume->setVisible(false);
+        delete spacer;
     } else if (scene == 1) {
         delete lText;
         delete lProg;
+        delete spacer;
     } else if (scene == 3) {
         delete lText;
         delete lProg;
+        delete spacer;
     } else if (scene == 4) {
+        rAuto->setVisible(false);
+        rCustom->setVisible(false);
+        delete iROM;
+    } else if (scene == 5) {
         delete lText;
         delete lProg;
         delete progBar;
-    } else if (scene == 6) {
+        delete spacer;
+    } else if (scene == 7) {
         delete lText;
         delete lProg;
+        delete spacer;
     }
 }
 
@@ -243,6 +282,7 @@ void MainWindow::progressBar(int percentage)
 {
     if (percentage >= 0) {
         ui->gridLayout_Content->addWidget(progBar);
+        ui->gridLayout_Content->addWidget(spacer);
         progBar->setValue(percentage);
         progBar->update();
         crashStop += 1;
@@ -257,6 +297,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->pushButton_Close->setVisible(false);
 
+    rAuto = new QRadioButton;
+    rCustom = new QRadioButton;
+
     setInfoLabelText("Hello, and welcome to this automatic flash setup.\n"
                      "You will be walked trough steps that involve downloading, \n"
                      "extracting, preparing and finally flashing.\n"
@@ -264,6 +307,7 @@ MainWindow::MainWindow(QWidget *parent)
                      "will be told to you trough different alerts.\n\n"
                      "This app is free and open source, released on GitHub.\n\n"
                      "Anyways, let's get started.");
+    ui->gridLayout_Content->addWidget(spacer);
 
     progBar = new QProgressBar;
     progBar->setRange(0, 100);
@@ -272,13 +316,15 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(&fT,SIGNAL(update(const QString&)),SLOT(setDlProgText(const QString&)), Qt::AutoConnection);
     QObject::connect(&fT,SIGNAL(msgBox(const QString&, const QString&, const int&)),SLOT(msgBoxThread(const QString&, const QString&, const int&)), Qt::AutoConnection);
     QObject::connect(&fT,SIGNAL(progBar(const int&)),SLOT(progressBar(const int&)), Qt::AutoConnection);
+    QObject::connect(rAuto, &QRadioButton::toggled, this, &MainWindow::rAuto_clicked);
+    QObject::connect(rCustom, &QRadioButton::toggled, this, &MainWindow::rCustom_clicked);
+    QObject::connect(iROM, &QLineEdit::textChanged, this, &MainWindow::iROM_text);
 
     stylesheet = "border: 2px solid black; ";
 
     msgBoxStylesheet = "QMessageBox QLabel {font-size: 20px;} "
                        "QMessageBox QPushButton {font-size: 16px;}";
 }
-
 
 MainWindow::~MainWindow()
 {
@@ -340,7 +386,7 @@ void MainWindow::on_pushButton_Resume_clicked()
             ui->label_Prep->setStyleSheet(stylesheet + "color: green;");
             ui->label_Check->setStyleSheet(stylesheet + "color: green;");
             ui->label_Download->setStyleSheet(stylesheet + "color: green;");
-            scene += 6; delScene += 6;
+            scene += 7; delScene += 5;
             ui->pushButton_Next->click();
         }
     }

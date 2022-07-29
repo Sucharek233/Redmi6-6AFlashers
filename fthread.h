@@ -30,6 +30,8 @@ public slots:
 
     void setDriverArch(QString architecture) {arch = architecture;}
 
+    void setROMLink(QString ROM) {romLink = ROM;}
+
 protected:
    virtual void run();
 
@@ -53,6 +55,7 @@ private:
 
     QString arch = "x64";
 
+    QString romLink = "auto";
 };
 
 #endif // FTHREAD_H

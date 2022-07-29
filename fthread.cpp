@@ -58,9 +58,7 @@ QString getROMFolderName(QString path)
     QDir search(path);
     QStringList dirs = search.entryList(QDir::NoDotAndDotDot | QDir::Dirs);
     QString name;
-    foreach(QString folder, dirs) {
-        if (folder.count() < 30) {} else {name = folder; break;}
-    }
+    foreach(QString folder, dirs) {name = folder; break;}
     return name;
 }
 
@@ -197,17 +195,18 @@ void fThread::run()
 
             if (internetBreak == 0) {
             QProcess getROMReady;
-            QString romLink;
-            if (codename == "product: cereus\r\n") {
-                romLink = "https://bigota.d.miui.com/V11.0.4.0.PCGMIXM/cereus_global_images_V11.0.4.0.PCGMIXM_20200527.0000.00_9.0_global_f6d253e00b.tgz";
-            } else if (codename == "product: cactus\r\n") {
-                romLink = "https://bigota.d.miui.com/V11.0.8.0.PCBMIXM/cactus_global_images_V11.0.8.0.PCBMIXM_20200509.0000.00_9.0_global_5fe1e27073.tgz";
-            } else {
-                emit msgBox("How???", "Ok, how are you even here?\n"
-                                      "Did my codename check fail?\n"
-                                      "Do you have the correct codename and this doesn't work?\n"
-                                      "Please open an issue on my gihub page if you got here with a wrong codename or correct one and this message displayed.\n\n"
-                                      "Thank you.", 1);
+            if (romLink == "auto") {
+                if (codename == "product: cereus\r\n") {
+                    romLink = "https://bigota.d.miui.com/V11.0.4.0.PCGMIXM/cereus_global_images_V11.0.4.0.PCGMIXM_20200527.0000.00_9.0_global_f6d253e00b.tgz";
+                } else if (codename == "product: cactus\r\n") {
+                    romLink = "https://bigota.d.miui.com/V11.0.8.0.PCBMIXM/cactus_global_images_V11.0.8.0.PCBMIXM_20200509.0000.00_9.0_global_5fe1e27073.tgz";
+                } else {
+                    emit msgBox("How???", "Ok, how are you even here?\n"
+                                          "Did my codename check fail?\n"
+                                          "Do you have the correct codename and this doesn't work?\n"
+                                          "Please open an issue on my gihub page if you got here with a wrong codename or correct one and this message displayed.\n\n"
+                                          "Thank you.", 1);
+                }
             }
             command.clear(); command << "/C" << dir + "curl.exe " + romLink + " --output " + dir + "ROM/ROM.tgz --insecure 2>" + dir + "ROM/out.txt";
             getROMReady.startDetached("cmd", command);
