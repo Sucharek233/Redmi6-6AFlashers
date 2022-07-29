@@ -6,6 +6,8 @@ Redmi 6 flash hasn't been tested yet, but should work fine. The ROM download and
 
 The progress bar at ROM download may glitch out a bit, but don't worry, it won't affect anything.
 
+Some images may be outdated (for now, just spacing, not important).
+
 ### Sources:
 
 Drivers taken from [here](https://github.com/DataStream3/15-Seconds-ADB-Installer-Reborn/tree/master/driver).
@@ -42,17 +44,25 @@ If you don't have a Redmi 6 or Redmi 6A, the program ends there.
 
 ![image](https://user-images.githubusercontent.com/31042508/179201890-7d475549-ed72-47be-a429-16286f877de3.png)
 
-After your device is verified and internet connection will be checked, a ROM will start downloading (the best one for custom ROMs: R6 is 11.0.4.0 and R6A is 11.0.8.0).
+After your device is verified and internet connection will be checked, and you will get the chance to pick one of these options.
 
-![progressDL](https://user-images.githubusercontent.com/31042508/180451119-fd086210-94a3-470d-9c80-633a279a3a33.png)
+![image](https://user-images.githubusercontent.com/31042508/181814250-1c5349a1-42bf-48d9-8ad9-a1089883b4cc.png)
+
+You can either download automatically the best MIUI versions for custom ROMs (versions displayed on image above) or you can put in your own download link.
+
+![image](https://user-images.githubusercontent.com/31042508/181814463-10691190-3b80-4b71-9e2b-c3d3550c399a.png)
+
+After you make your decision, the ROM will start downloading.
+
+![progressDL](https://user-images.githubusercontent.com/31042508/181813769-06f755cd-f224-4e00-817e-5fafd6d05208.png)
 
 After that, it will extract.
 
-![progressExtract](https://user-images.githubusercontent.com/31042508/180451249-ddede633-38f8-444f-bd2f-f0d80bb59bc9.png)
+![progressExtract](https://user-images.githubusercontent.com/31042508/181813893-aadc7338-94d9-4733-86cb-c3f8a20444f6.png)
 
 Then some additional tasks.
 
-![dlFinish](https://user-images.githubusercontent.com/31042508/180451369-700a5da7-2875-4d6c-a5ea-fa9fbe1c4b02.png)
+![dlFinish](https://user-images.githubusercontent.com/31042508/181813937-2da34b1f-c7c8-40f6-b124-df139445a100.png)
 
 Flashing time! You'll get to choose if you want to wipe your data - clean all (recommended) or if you want to keep them - save user data.
 
